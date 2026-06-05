@@ -1,6 +1,6 @@
-# Groover Mode
+# Motif
 
-Groover Mode é uma extensão para navegadores que ajuda músicos a praticar no YouTube usando contagem regressiva, mudança de tom e checkpoints salvos.
+Motif é uma extensão para navegadores que ajuda músicos a praticar no YouTube usando contagem regressiva, mudança de tom e checkpoints salvos.
 
 ## Recursos
 
@@ -49,7 +49,7 @@ npm run build
 1. Abra o navegador e acesse `chrome://extensions/` (ou `[seu-navegador]://extensions/`).
 2. Ative o modo de desenvolvedor.
 3. Clique em "Carregar sem compactação".
-4. Selecione o build do projeto (`/groover-mode/dist`).
+4. Selecione o build do projeto (`/motif/dist`).
 
 ## Observações
 

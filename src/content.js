@@ -361,7 +361,7 @@ function setupVideoController(video) {
       const pointLabel = targetKey.replace('Key', '');
 
       if (savedTime === null) {
-        showTopFeedback(`Ponto [${pointLabel}] vazio! Use Shift+${pointLabel}`);
+        showTopFeedback(`Ponto [${pointLabel}] vazio! Use Shift+${pointLabel} para definir`);
         return;
       }
 
