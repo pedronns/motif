@@ -1,4 +1,6 @@
-// DOM elements
+import { evaluate } from 'mathjs';
+
+// dom elements
 
 // general config
 const soundCheck = document.getElementById('soundEnabled')
@@ -24,33 +26,74 @@ const clearCheckpointsBtn = document.getElementById('clearCheckpointsBtn')
 const clearFeedback = document.getElementById('clearFeedback') 
 const checkpointCountdownCheck = document.getElementById('checkpointCountdownEnabled')
 
-// LOCAL STATE AND TIME MANAGEMENT
+// local state and time management
 let currentTicks = 4
 let currentSemitones = 0
 let currentMode = 'seconds'
-let clearTimeoutId = null // Gerencia o tempo do alerta de limpeza
+let clearTimeoutId = null // manages clean feedback alert timeouts
 
-// FUNÇÕES UTILITÁRIAS
+// utility functions
 function formatPitchText(value) {
   if (value === 0) return '0'
   return value > 0 ? `+${value}` : `${value}`
 }
 
-// Salva o estado atual no storage local do Chrome
+// saves current configuration to chrome local storage
 function saveSettings() {
   if (!soundCheck) return
+
+  let bpmValue = parseInt(bpmInput.value, 10) || 120
+
+  // clamping fallback limits for safe storage operations
+  if (bpmValue < 30) bpmValue = 30
+  if (bpmValue > 300) bpmValue = 300
 
   chrome.storage.local.set({
     soundEnabled: soundCheck.checked,
     countdownTicks: currentTicks,
     semitones: currentSemitones,
     intervalMode: currentMode,
-    bpmValue: parseInt(bpmInput.value, 10) || 120,
+    bpmValue: bpmValue,
     countdownOnCheckpoint: checkpointCountdownCheck ? checkpointCountdownCheck.checked : true
   })
 }
 
-// visually alternantes between secs and BPM
+// evaluates the mathematical string input and updates configurations
+function handleBpmEvaluation() {
+  try {
+    const expression = bpmInput.value.trim()
+
+    if (expression === '') {
+      bpmInput.value = 120
+      saveSettings()
+      return
+    }
+
+    // safely process calculation via mathjs
+    let result = evaluate(expression)
+    result = Math.round(Number(result))
+
+    if (isNaN(result) || !isFinite(result) || result <= 0) {
+      throw new Error('invalid calculation output')
+    }
+
+		if (result < 30) result = 30
+    if (result > 300) result = 300
+
+    // sanitize string input UI rendering with pure numerical string
+    bpmInput.value = result
+
+  } catch (error) {
+    // fallback structural check fetching last robust stored asset value
+    chrome.storage.local.get({ bpmValue: 120 }, (items) => {
+      bpmInput.value = items.bpmValue
+    })
+  }
+
+  saveSettings()
+}
+
+// visually alternates between secs and bpm layouts
 function setMode(mode) {
   currentMode = mode
   if (mode === 'seconds') {
@@ -79,7 +122,7 @@ function changePitch(delta) {
   saveSettings()
 }
 
-// INIT
+// init
 document.addEventListener('DOMContentLoaded', () => {
   chrome.storage.local.get({
     soundEnabled: true,
@@ -103,14 +146,19 @@ document.addEventListener('DOMContentLoaded', () => {
   })
 })
 
-// EVENT LISTENERS
+// event listeners
 
 // mode alternation
 modeSecondsBtn.addEventListener('click', () => setMode('seconds'))
 modeBpmBtn.addEventListener('click', () => setMode('bpm'))
 
-// BPM input
-bpmInput.addEventListener('input', saveSettings)
+// bpm math evaluation bindings
+bpmInput.addEventListener('blur', handleBpmEvaluation)
+bpmInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    bpmInput.blur() // force-trigger the blur evaluation script above
+  }
+})
 
 // +/- buttons
 ticksMinusBtn.addEventListener('click', () => changeTicks(-1))
@@ -118,13 +166,13 @@ ticksPlusBtn.addEventListener('click', () => changeTicks(1))
 pitchMinusBtn.addEventListener('click', () => changePitch(-1))
 pitchPlusBtn.addEventListener('click', () => changePitch(1))
 
-// sheckboxes / switches
+// checkboxes / switches
 soundCheck.addEventListener('change', saveSettings)
 if (checkpointCountdownCheck) {
   checkpointCountdownCheck.addEventListener('change', saveSettings)
 }
 
-// CLEAR CHECKPOINTS
+// clear checkpoints
 clearCheckpointsBtn.addEventListener('click', () => {
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs[0]?.id) {

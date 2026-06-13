@@ -1,6 +1,6 @@
 import * as Tone from 'tone';
 
-// GLOBAL STATE
+// global state
 let CONFIG = {
   soundEnabled: true,
   countdownTicks: 4,
@@ -57,7 +57,7 @@ let countdownCleanup = null;
 let isPitchInitialized = false;
 let feedbackTimeout = null;
 
-// PITCH AND AUDIO (TONE.JS)
+// pitch and audio (tone.js)
 async function initPitch(video) {
   await Tone.start();
   clearPitchNodes();
@@ -119,7 +119,7 @@ function changePitchViaKeyboard(delta) {
   }
 }
 
-// VISUAL FEEDBACK
+// visual feedback
 function showTopFeedback(text) {
   const player = document.querySelector('#movie_player');
   if (!player) return;
@@ -148,7 +148,7 @@ function showTopFeedback(text) {
   feedbackTimeout = setTimeout(() => { feedback.style.opacity = '0'; }, 1500);
 }
 
-// METRONOME AND OVERLAY
+// metronome and overlay
 function playMetronomeClick(isFirstTick = false) {
   if (!CONFIG.soundEnabled) return;
 
@@ -184,14 +184,28 @@ function createOverlayDOM() {
   return overlay;
 }
 
-function getTickIntervalMs() {
+// calculates time gap dynamically synced with youtube native playback speed engine
+function getTickIntervalMs(video) {
   if (CONFIG.intervalMode === 'bpm') {
-    return (60 / CONFIG.bpmValue) * 1000;
+    let currentSpeed = 1;
+    
+    // fetch speed factor right from youtube core dashboard api to get clean values even while video is frozen
+    const ytPlayer = document.querySelector('#movie_player');
+    if (ytPlayer && typeof ytPlayer.getPlaybackRate === 'function') {
+      currentSpeed = ytPlayer.getPlaybackRate();
+    } else if (video) {
+      currentSpeed = video.playbackRate;
+    }
+    
+    const baseBpm = parseInt(CONFIG.bpmValue, 10) || 120;
+    const adjustedBpm = baseBpm * currentSpeed;
+    
+    return (60 / adjustedBpm) * 1000;
   }
   return 1000; 
 }
 
-function runCountdown(onFinish) {
+function runCountdown(video, onFinish) {
   const existingOverlay = document.getElementById('mm-countdown-overlay');
   if (existingOverlay) existingOverlay.remove();
 
@@ -209,7 +223,7 @@ function runCountdown(onFinish) {
   overlay.textContent = currentTick;
   playMetronomeClick(true);
 
-  const intervalMs = getTickIntervalMs();
+  const intervalMs = getTickIntervalMs(video);
 
   const timer = setInterval(() => {
     currentTick -= 1;
@@ -234,7 +248,7 @@ function runCountdown(onFinish) {
   };
 }
 
-// CHECKPOINT VISUAL AID
+// checkpoint visual aid
 function formatTimeDisplay(seconds) {
   if (isNaN(seconds)) return '0:00';
 
@@ -293,7 +307,7 @@ function updateVideoSliderCheckpoints(video) {
   });
 }
 
-// VIDEO EVENTS MANAGEMENT
+// video events management
 function setupVideoController(video) {
   let programmaticPlay = false;
 
@@ -309,7 +323,7 @@ function setupVideoController(video) {
     if (countdownActive || !video.paused) return;
     countdownActive = true;
 
-    countdownCleanup = runCountdown(() => {
+    countdownCleanup = runCountdown(video, () => {
       countdownActive = false;
       countdownCleanup = null;
       programmaticPlay = true;
@@ -336,7 +350,7 @@ function setupVideoController(video) {
 
     const targetKey = event.code; 
 
-    // CHECKPOINTS CREATION (Shift + A/S/D)
+    // checkpoints creation (shift + a/s/d)
     if (event.shiftKey && (targetKey === 'KeyA' || targetKey === 'KeyS' || targetKey === 'KeyD')) {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       event.preventDefault();
@@ -354,7 +368,7 @@ function setupVideoController(video) {
 
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
 
-    // CHECKPOINTS REPRODUCTION (A / S / D) ---
+    // checkpoints reproduction (a / s / d)
     if (targetKey === 'KeyA' || targetKey === 'KeyS' || targetKey === 'KeyD') {
       event.preventDefault();
       const savedTime = checkpoints[targetKey];
@@ -372,7 +386,7 @@ function setupVideoController(video) {
 
       setTimeout(() => {
         if (CONFIG.countdownOnCheckpoint) {
-          triggerCountdown(); // Com contagem regressiva
+          triggerCountdown();
         } else {
           programmaticPlay = true;
           video.play().finally(() => {
@@ -383,7 +397,7 @@ function setupVideoController(video) {
       return;
     }
 
-    // queue (Q)
+    // queue (q)
     if (targetKey === 'KeyQ') {
       if (countdownActive) {
         event.preventDefault();
@@ -397,7 +411,7 @@ function setupVideoController(video) {
       return;
     }
 
-    // pitch shift (E / R)
+    // pitch shift (e / r)
     if (targetKey === 'KeyE') { event.preventDefault(); changePitchViaKeyboard(-1); return; }
     if (targetKey === 'KeyR') { event.preventDefault(); changePitchViaKeyboard(1); return; }
   };
@@ -426,7 +440,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// INIT
+// init
 function initializeExtension() {
   loadSettings(); 
   injectCheckpointStyles();

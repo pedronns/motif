@@ -241,7 +241,7 @@ input:checked + .slider:before {
   color: #0f0f0f;
 }
 
-input[type="number"] {
+input[type="text"] {
   width: 100%;
   box-sizing: border-box;
   padding: 10px 12px;
@@ -256,11 +256,7 @@ input[type="number"] {
 	color-scheme: dark;
 }
 
-input[type=number]::-webkit-inner-spin-button {
-  background-color: transparent;
-}
-
-input[type="number"]:focus {
+input[type="text"]:focus {
   outline: none;
   border-color: var(--primary-color);
 }
